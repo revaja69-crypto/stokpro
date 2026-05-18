@@ -1,0 +1,17 @@
+{
+  "name": "StokPro - Manajemen Stok",
+  "short_name": "StokPro",
+  "description": "Aplikasi pencatatan stok barang dan penjualan offline.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Box_icon.svg/512px-Box_icon.svg.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
