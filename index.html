@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StokPro - Manajemen Stok Barang</title>
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Animasi sederhana untuk modal dan toast */
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        
+        /* Sembunyikan scrollbar untuk tampilan lebih bersih di tabel */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 min-h-screen">
+
+    <!-- Toast Notifikasi -->
+    <div id="toast" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden items-center z-50 slide-in transition-all duration-300">
+        <i id="toast-icon" data-lucide="check-circle-2" class="mr-2 w-5 h-5"></i>
+        <span id="toast-message">Notifikasi</span>
+    </div>
+
+    <!-- Navigasi Atas -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="bg-blue-600 p-2 rounded-lg mr-3 flex items-center justify-center">
+                        <i data-lucide="package" class="text-white w-5 h-5"></i>
+                    </div>
+                    <span class="font-bold text-xl text-gray-800 tracking-tight">StokPro</span>
+                </div>
+                <div class="hidden md:flex space-x-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg flex items-center transition-colors bg-blue-50 text-blue-700 font-medium">
+                        <i data-lucide="layout-dashboard" class="mr-2 w-4 h-4"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('items')" id="nav-items" class="nav-btn px-4 py-2 rounded-lg flex items-center transition-colors text-gray-600 hover:bg-gray-50">
+                        <i data-lucide="package" class="mr-2 w-4 h-4"></i> Stok Barang
+                    </button>
+                    <button onclick="switchTab('sales')" id="nav-sales" class="nav-btn px-4 py-2 rounded-lg flex items-center transition-colors text-gray-600 hover:bg-gray-50">
+                        <i data-lucide="shopping-cart" class="mr-2 w-4 h-4"></i> Penjualan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Navigasi Bawah (Mobile) -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-40 pb-safe">
+        <button onclick="switchTab('dashboard')" id="mob-dashboard" class="mob-btn flex flex-col items-center p-2 rounded-lg w-full text-blue-600">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i> <span class="text-[10px] mt-1 font-medium">Dashboard</span>
+        </button>
+        <button onclick="switchTab('items')" id="mob-items" class="mob-btn flex flex-col items-center p-2 rounded-lg w-full text-gray-500">
+            <i data-lucide="package" class="w-5 h-5"></i> <span class="text-[10px] mt-1 font-medium">Barang</span>
+        </button>
+        <button onclick="switchTab('sales')" id="mob-sales" class="mob-btn flex flex-col items-center p-2 rounded-lg w-full text-gray-500">
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i> <span class="text-[10px] mt-1 font-medium">Penjualan</span>
+        </button>
+    </div>
+
+    <!-- Konten Utama -->
+    <main class="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
+        <div class="mb-6">
+            <h1 id="page-title" class="text-2xl font-bold text-gray-800">Ringkasan Bisnis</h1>
+            <p class="text-gray-500 text-sm mt-1">Data Anda tersimpan secara lokal dan aman di perangkat ini.</p>
+        </div>
+
+        <!-- Tab 1: Dashboard -->
+        <div id="view-dashboard" class="view-section grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="package" class="w-6 h-6"></i></div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Total Jenis Barang</p>
+                    <p id="dash-total-items" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-green-100 text-green-600 rounded-lg"><i data-lucide="layers" class="w-6 h-6"></i></div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Stok Tersedia</p>
+                    <p id="dash-available-stock" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-orange-100 text-orange-600 rounded-lg"><i data-lucide="shopping-cart" class="w-6 h-6"></i></div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Stok Terjual</p>
+                    <p id="dash-sold-stock" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-purple-100 text-purple-600 rounded-lg"><i data-lucide="trending-up" class="w-6 h-6"></i></div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Total Keuntungan</p>
+                    <p id="dash-profit" class="text-xl font-bold text-gray-800">Rp 0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Manajemen Stok Barang -->
+        <div id="view-items" class="view-section hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 md:p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-800">Daftar Stok Barang</h2>
+                    <button onclick="openItemModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg flex items-center transition-colors text-sm md:text-base">
+                        <i data-lucide="plus" class="mr-1 md:mr-2 w-4 h-4"></i> Tambah
+                    </button>
+                </div>
+                <div class="overflow-x-auto no-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap md:whitespace-normal">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-sm">
+                                <th class="p-4 border-b">Nama Barang</th>
+                                <th class="p-4 border-b">Stok</th>
+                                <th class="p-4 border-b">Harga Modal</th>
+                                <th class="p-4 border-b">Harga Jual</th>
+                                <th class="p-4 border-b text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body">
+                            <!-- Data barang akan dimuat di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Manajemen Penjualan -->
+        <div id="view-sales" class="view-section hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 md:p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-800">Catatan Penjualan</h2>
+                    <button onclick="openSaleModal()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg flex items-center transition-colors text-sm md:text-base">
+                        <i data-lucide="plus" class="mr-1 md:mr-2 w-4 h-4"></i> Catat
+                    </button>
+                </div>
+                <div class="overflow-x-auto no-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap md:whitespace-normal">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-sm">
+                                <th class="p-4 border-b">Tanggal</th>
+                                <th class="p-4 border-b">Nama Barang</th>
+                                <th class="p-4 border-b">Terjual</th>
+                                <th class="p-4 border-b">Harga Modal</th>
+                                <th class="p-4 border-b">Harga Jual</th>
+                                <th class="p-4 border-b">Keuntungan</th>
+                                <th class="p-4 border-b text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body">
+                            <!-- Data penjualan akan dimuat di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Barang -->
+    <div id="item-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50 fade-in">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 id="item-modal-title" class="font-bold text-gray-800">Tambah Barang</h3>
+                <button onclick="closeModal('item-modal')" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="item-form" class="p-6 space-y-4" onsubmit="handleSaveItem(event)">
+                <input type="hidden" id="item-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Barang</label>
+                    <input required type="text" id="item-name" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Kopi Bubuk">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Stok</label>
+                    <input required type="number" min="0" id="item-stock" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Modal (Rp)</label>
+                    <input required type="number" min="0" id="item-cost" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="10000">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual (Rp)</label>
+                    <input required type="number" min="0" id="item-price" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="15000">
+                </div>
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('item-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Penjualan -->
+    <div id="sale-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50 fade-in">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 id="sale-modal-title" class="font-bold text-gray-800">Catat Penjualan</h3>
+                <button onclick="closeModal('sale-modal')" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="sale-form" class="p-6 space-y-4" onsubmit="handleSaveSale(event)">
+                <input type="hidden" id="sale-id">
+                <input type="hidden" id="sale-old-qty" value="0">
+                <input type="hidden" id="sale-date">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Barang</label>
+                    <select required id="sale-item-id" onchange="onSaleItemChange()" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100">
+                        <!-- Options akan dimuat pakai JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Terjual</label>
+                    <input required type="number" min="1" id="sale-qty" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="1">
+                    <p id="sale-edit-warning" class="text-xs text-orange-600 mt-1 hidden">Mengubah jumlah akan otomatis menyesuaikan stok barang.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Modal (Rp)</label>
+                    <input required type="number" min="0" id="sale-cost" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual (Rp)</label>
+                    <input required type="number" min="0" id="sale-price" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('sale-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">Simpan Penjualan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Aplikasi -->
+    <script>
+        // Inisialisasi Icon
+        lucide.createIcons();
+
+        // --- Variabel Global ---
+        let items = [];
+        let sales = [];
+        const DB_NAME = 'StokProDB_Native';
+        const DB_VERSION = 1;
+
+        // --- Utilities ---
+        const formatRupiah = (number) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        };
+
+        const formatDate = (isoString) => {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        };
+
+        const showToast = (message, type = 'success') => {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            msg.textContent = message;
+            toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg flex items-center z-50 slide-in transition-all duration-300 ${type === 'error' ? 'bg-red-50 text-red-800 border-l-4 border-red-500' : 'bg-green-50 text-green-800 border-l-4 border-green-500'}`;
+            
+            // Re-render icon based on type
+            icon.outerHTML = `<i id="toast-icon" data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle-2'}" class="mr-2 w-5 h-5"></i>`;
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-100%]');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                    toast.classList.remove('opacity-0', 'translate-y-[-100%]');
+                }, 300);
+            }, 3000);
+        };
+
+        // --- IndexedDB Helper ---
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('items')) {
+                        db.createObjectStore('items', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains('sales')) {
+                        db.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = (event) => reject(event.target.error);
+            });
+        };
+
+        const dbHelper = {
+            async getAll(storeName) {
+                const db = await initDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            async put(storeName, data) {
+                const db = await initDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const request = store.put(data);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            async delete(storeName, id) {
+                const db = await initDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const request = store.delete(id);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            async processSale(saleData, itemData, isEdit = false, oldQty = 0) {
+                const db = await initDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(['items', 'sales'], 'readwrite');
+                    const itemsStore = tx.objectStore('items');
+                    const salesStore = tx.objectStore('sales');
+
+                    if (isEdit) {
+                        const diff = saleData.quantity - oldQty;
+                        itemData.stock -= diff;
+                    } else {
+                        itemData.stock -= saleData.quantity;
+                    }
+
+                    itemsStore.put(itemData);
+                    salesStore.put(saleData);
+
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            },
+            async deleteSaleAndRestoreStock(saleId, itemData, restoreQty) {
+                const db = await initDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(['items', 'sales'], 'readwrite');
+                    const itemsStore = tx.objectStore('items');
+                    const salesStore = tx.objectStore('sales');
+
+                    if (itemData) {
+                        itemData.stock += restoreQty;
+                        itemsStore.put(itemData);
+                    }
+                    salesStore.delete(saleId);
+
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            }
+        };
+
+        // --- Render UI ---
+        const renderDashboard = () => {
+            const totalAvailable = items.reduce((acc, curr) => acc + curr.stock, 0);
+            const totalSold = sales.reduce((acc, curr) => acc + curr.quantity, 0);
+            const totalProfit = sales.reduce((acc, curr) => acc + curr.profit, 0);
+
+            document.getElementById('dash-total-items').textContent = items.length;
+            document.getElementById('dash-available-stock').textContent = totalAvailable;
+            document.getElementById('dash-sold-stock').textContent = totalSold;
+            document.getElementById('dash-profit').textContent = formatRupiah(totalProfit);
+        };
+
+        const renderItemsTable = () => {
+            const tbody = document.getElementById('items-table-body');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Belum ada data barang.</td></tr>';
+                return;
+            }
+
+            // Urutkan dari yang terbaru
+            [...items].reverse().forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 border-b last:border-0 transition-colors';
+                
+                const stockBadgeClass = item.stock <= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
+
+                tr.innerHTML = `
+                    <td class="p-4 font-medium text-gray-800">${item.name}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-medium ${stockBadgeClass}">${item.stock} Unit</span></td>
+                    <td class="p-4 text-gray-600">${formatRupiah(item.costPrice)}</td>
+                    <td class="p-4 text-gray-600">${formatRupiah(item.sellingPrice)}</td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="editItem(${item.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                        <button onclick="deleteItem(${item.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        };
+
+        const renderSalesTable = () => {
+            const tbody = document.getElementById('sales-table-body');
+            tbody.innerHTML = '';
+
+            if (sales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">Belum ada transaksi penjualan.</td></tr>';
+                return;
+            }
+
+            [...sales].reverse().forEach(sale => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 border-b last:border-0 transition-colors';
+                
+                tr.innerHTML = `
+                    <td class="p-4 text-sm text-gray-600">${formatDate(sale.date)}</td>
+                    <td class="p-4 font-medium text-gray-800">${sale.itemName}</td>
+                    <td class="p-4 font-bold text-gray-700">${sale.quantity}</td>
+                    <td class="p-4 text-gray-600">${formatRupiah(sale.costPrice)}</td>
+                    <td class="p-4 text-gray-600">${formatRupiah(sale.sellingPrice)}</td>
+                    <td class="p-4 font-medium text-green-600">${formatRupiah(sale.profit)}</td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="editSale(${sale.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                        <button onclick="deleteSale(${sale.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        };
+
+        const populateItemSelect = () => {
+            const select = document.getElementById('sale-item-id');
+            select.innerHTML = '<option value="" disabled selected>-- Pilih Barang --</option>';
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} (Stok: ${item.stock})`;
+                select.appendChild(option);
+            });
+        };
+
+        const loadData = async () => {
+            try {
+                items = await dbHelper.getAll('items');
+                sales = await dbHelper.getAll('sales');
+                
+                renderDashboard();
+                renderItemsTable();
+                renderSalesTable();
+                populateItemSelect();
+            } catch (error) {
+                showToast('Gagal memuat data dari database', 'error');
+            }
+        };
+
+        // --- Interaksi Tab (Navigasi) ---
+        const switchTab = (tabName) => {
+            // Sembunyikan semua section
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            // Tampilkan section yang dipilih
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            // Update judul halaman
+            const titles = {
+                'dashboard': 'Ringkasan Bisnis',
+                'items': 'Manajemen Stok Barang',
+                'sales': 'Manajemen Penjualan'
+            };
+            document.getElementById('page-title').textContent = titles[tabName];
+
+            // Reset warna tombol desktop
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn px-4 py-2 rounded-lg flex items-center transition-colors text-gray-600 hover:bg-gray-50';
+            });
+            // Set active desktop
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if(activeNav) activeNav.className = 'nav-btn px-4 py-2 rounded-lg flex items-center transition-colors bg-blue-50 text-blue-700 font-medium';
+
+            // Reset warna tombol mobile
+            document.querySelectorAll('.mob-btn').forEach(btn => {
+                btn.className = 'mob-btn flex flex-col items-center p-2 rounded-lg w-full text-gray-500';
+            });
+            // Set active mobile
+            const activeMob = document.getElementById(`mob-${tabName}`);
+            if(activeMob) activeMob.className = 'mob-btn flex flex-col items-center p-2 rounded-lg w-full text-blue-600';
+        };
+
+        // --- Modals Logic ---
+        const openModal = (id) => {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        const closeModal = (id) => {
+            const modal = document.getElementById(id);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        // --- Handlers Item ---
+        const openItemModal = () => {
+            document.getElementById('item-form').reset();
+            document.getElementById('item-id').value = '';
+            document.getElementById('item-modal-title').textContent = 'Tambah Barang';
+            openModal('item-modal');
+        };
+
+        const editItem = (id) => {
+            const item = items.find(i => i.id === id);
+            if(!item) return;
+
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('item-name').value = item.name;
+            document.getElementById('item-stock').value = item.stock;
+            document.getElementById('item-cost').value = item.costPrice;
+            document.getElementById('item-price').value = item.sellingPrice;
+            document.getElementById('item-modal-title').textContent = 'Edit Barang';
+            
+            openModal('item-modal');
+        };
+
+        const handleSaveItem = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('item-id').value;
+            
+            const itemData = {
+                name: document.getElementById('item-name').value,
+                stock: parseInt(document.getElementById('item-stock').value),
+                costPrice: parseFloat(document.getElementById('item-cost').value),
+                sellingPrice: parseFloat(document.getElementById('item-price').value),
+            };
+
+            if (id) itemData.id = parseInt(id);
+
+            try {
+                await dbHelper.put('items', itemData);
+                showToast(`Barang berhasil ${id ? 'diperbarui' : 'ditambahkan'}`);
+                closeModal('item-modal');
+                loadData();
+            } catch (error) {
+                showToast('Terjadi kesalahan saat menyimpan barang', 'error');
+            }
+        };
+
+        const deleteItem = async (id) => {
+            if(!confirm('Apakah Anda yakin ingin menghapus barang ini?')) return;
+            try {
+                await dbHelper.delete('items', id);
+                showToast('Barang berhasil dihapus');
+                loadData();
+            } catch (error) {
+                showToast('Gagal menghapus barang', 'error');
+            }
+        };
+
+        // --- Handlers Penjualan ---
+        const onSaleItemChange = () => {
+            const select = document.getElementById('sale-item-id');
+            const itemId = parseInt(select.value);
+            const isEdit = !!document.getElementById('sale-id').value;
+            
+            if(!isEdit) {
+                const selectedItem = items.find(i => i.id === itemId);
+                if(selectedItem) {
+                    document.getElementById('sale-cost').value = selectedItem.costPrice;
+                    document.getElementById('sale-price').value = selectedItem.sellingPrice;
+                }
+            }
+        };
+
+        const openSaleModal = () => {
+            document.getElementById('sale-form').reset();
+            document.getElementById('sale-id').value = '';
+            document.getElementById('sale-old-qty').value = '0';
+            document.getElementById('sale-item-id').disabled = false; // Bisa pilih barang
+            document.getElementById('sale-edit-warning').classList.add('hidden');
+            document.getElementById('sale-modal-title').textContent = 'Catat Penjualan';
+            openModal('sale-modal');
+        };
+
+        const editSale = (id) => {
+            const sale = sales.find(s => s.id === id);
+            if(!sale) return;
+
+            document.getElementById('sale-id').value = sale.id;
+            document.getElementById('sale-old-qty').value = sale.quantity;
+            document.getElementById('sale-date').value = sale.date;
+            
+            const selectItem = document.getElementById('sale-item-id');
+            selectItem.value = sale.itemId;
+            selectItem.disabled = true; // Kunci pilihan barang jika sedang edit
+
+            document.getElementById('sale-qty').value = sale.quantity;
+            document.getElementById('sale-cost').value = sale.costPrice;
+            document.getElementById('sale-price').value = sale.sellingPrice;
+            
+            document.getElementById('sale-edit-warning').classList.remove('hidden');
+            document.getElementById('sale-modal-title').textContent = 'Edit Penjualan';
+            
+            openModal('sale-modal');
+        };
+
+        const handleSaveSale = async (e) => {
+            e.preventDefault();
+            
+            const saleIdInput = document.getElementById('sale-id').value;
+            const isEdit = !!saleIdInput;
+            
+            const itemId = parseInt(document.getElementById('sale-item-id').value);
+            const quantity = parseInt(document.getElementById('sale-qty').value);
+            const costPrice = parseFloat(document.getElementById('sale-cost').value);
+            const sellingPrice = parseFloat(document.getElementById('sale-price').value);
+            const oldQty = parseInt(document.getElementById('sale-old-qty').value);
+            
+            const profit = (sellingPrice - costPrice) * quantity;
+            const date = isEdit ? document.getElementById('sale-date').value : new Date().toISOString();
+
+            const selectedItem = items.find(i => i.id === itemId);
+            if (!selectedItem) {
+                showToast('Barang tidak ditemukan', 'error');
+                return;
+            }
+
+            // Validasi stok
+            const diff = quantity - oldQty;
+            if (selectedItem.stock < diff) {
+                showToast(`Stok tidak cukup! Sisa stok: ${selectedItem.stock}`, 'error');
+                return;
+            }
+
+            const saleData = {
+                itemId,
+                itemName: selectedItem.name,
+                quantity,
+                costPrice,
+                sellingPrice,
+                profit,
+                date
+            };
+
+            if (isEdit) saleData.id = parseInt(saleIdInput);
+
+            try {
+                await dbHelper.processSale(saleData, selectedItem, isEdit, oldQty);
+                showToast(`Penjualan berhasil ${isEdit ? 'diperbarui' : 'dicatat'}`);
+                closeModal('sale-modal');
+                loadData();
+            } catch (error) {
+                showToast('Terjadi kesalahan saat memproses penjualan', 'error');
+            }
+        };
+
+        const deleteSale = async (id) => {
+            if(!confirm('Hapus data penjualan ini? Stok barang akan dikembalikan.')) return;
+            try {
+                const sale = sales.find(s => s.id === id);
+                if(!sale) return;
+
+                const itemToRestore = items.find(i => i.id === sale.itemId);
+                await dbHelper.deleteSaleAndRestoreStock(sale.id, itemToRestore, sale.quantity);
+                showToast('Data penjualan dihapus dan stok dikembalikan');
+                loadData();
+            } catch (error) {
+                showToast('Gagal menghapus data penjualan', 'error');
+            }
+        };
+
+        // --- Inisialisasi Saat Halaman Dimuat ---
+        window.onload = () => {
+            loadData();
+            switchTab('dashboard'); // Set default tab
+        };
+
+    </script>
+</body>
+</html>
