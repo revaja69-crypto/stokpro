@@ -8,6 +8,12 @@
   "theme_color": "#2563eb",
   "icons": [
     {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Box_icon.svg/192px-Box_icon.svg.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Box_icon.svg/512px-Box_icon.svg.png",
       "sizes": "512x512",
       "type": "image/png",
